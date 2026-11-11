@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Produk — Inventaris Hub{% endblock %}
+{% block content %}
+  <div class="page-title">
+    <h2>Produk</h2>
+    <p>Daftar produk inventaris.</p>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <table>
+      <thead>
+        <tr>
+          <th><a href="{{ url_for('produk', q=q, sort='nama') }}" style="text-decoration:none;color:inherit;">Nama</a></th>
+          <th>Kategori</th>
+          <th><a href="{{ url_for('produk', q=q, sort='harga') }}" style="text-decoration:none;color:inherit;">Harga</a></th>
+          <th><a href="{{ url_for('produk', q=q, sort='stok') }}" style="text-decoration:none;color:inherit;">Stok</a></th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.nama }}</td>
+          <td>{{ r.kategori }}</td>
+          <td>{{ r.harga | uang }}</td>
+          <td>{{ r.stok }}</td>
+          <td><span class="badge {{ r.status | lower }}">{{ r.status }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty">Tidak ada produk ditemukan.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

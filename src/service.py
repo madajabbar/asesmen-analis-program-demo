@@ -172,3 +172,96 @@ def laporan() -> dict:
         "voucher_aktif": voucher_aktif,
         "per_kategori": per_kategori,
     }
+
+
+# ---------------------------------------------------------------------
+# Query tambahan untuk antarmuka web (Fase 2)
+# ---------------------------------------------------------------------
+
+def total_stok() -> int:
+    """Jumlah stok seluruh produk (untuk kartu statistik)."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(SUM(stok), 0) FROM produk")
+            return int(cur.fetchone()[0])
+
+
+def voucher_terbit() -> int:
+    """Total voucher yang pernah terbit (semua status)."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM voucher")
+            return int(cur.fetchone()[0])
+
+
+def ringkasan_stok_per_kategori() -> List[dict]:
+    """Ringkasan per kategori: jumlah produk, total stok, nilai persediaan."""
+    query = """
+        SELECT k.nama AS kategori,
+               COUNT(p.id) AS jumlah_produk,
+               COALESCE(SUM(p.stok), 0) AS total_stok,
+               COALESCE(SUM(p.harga * p.stok), 0) AS nilai
+        FROM kategori k
+        LEFT JOIN produk p ON p.kategori_id = k.id
+        GROUP BY k.id, k.nama ORDER BY k.nama
+    """
+    with get_connection() as conn:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(query)
+            return cur.fetchall()
+
+
+def stok_menipis_habis() -> List[dict]:
+    """Produk berstatus MENIPIS atau HABIS (dari view v_ringkasan_stok)."""
+    query = """
+        SELECT nama_produk, nama_kategori, harga_satuan, stok, status_stok
+        FROM v_ringkasan_stok
+        WHERE status_stok IN ('MENIPIS', 'HABIS')
+        ORDER BY stok
+    """
+    with get_connection() as conn:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(query)
+            return cur.fetchall()
+
+
+def voucher_terbaru(limit: int = 5) -> List[dict]:
+    """Voucher terakhir dari view v_ringkasan_voucher."""
+    query = """
+        SELECT kode_voucher, nama_produk, jumlah, total_harga, status_voucher
+        FROM v_ringkasan_voucher
+        ORDER BY voucher_id DESC LIMIT %s
+    """
+    with get_connection() as conn:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(query, (limit,))
+            return cur.fetchall()
+
+
+def daftar_voucher() -> List[dict]:
+    """Seluruh voucher terbaru ke terlama."""
+    query = """
+        SELECT kode_voucher, nama_produk, nama_kategori, jumlah,
+               total_harga, status_voucher, tanggal
+        FROM v_ringkasan_voucher
+        ORDER BY voucher_id DESC
+    """
+    with get_connection() as conn:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(query)
+            return cur.fetchall()
+
+
+def riwayat_stok_log(limit: int = 100) -> List[dict]:
+    """Riwayat perubahan stok (bukti trigger stok_log)."""
+    query = """
+        SELECT l.id, p.nama AS produk, l.stok_sebelum, l.stok_sesudah,
+               l.perubahan, l.alasan, l.created_at
+        FROM stok_log l
+        JOIN produk p ON p.id = l.produk_id
+        ORDER BY l.id DESC LIMIT %s
+    """
+    with get_connection() as conn:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(query, (limit,))
+            return cur.fetchall()

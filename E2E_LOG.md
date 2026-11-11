@@ -101,3 +101,58 @@ Peningkatan: 49,2% lebih cepat
 
 ### 10. Hasil & sisa
 Semua langkah **LULUS**. Tidak ada blocker tersisa. Detail tambahan di `docs/01–06`.
+
+---
+
+## Fase 2 — Web (Interface Website Flask)
+
+**Tanggal**: 2026-11-11
+**Desain**: Stitch — "Inventaris & Payment Voucher" (design system *Cupertino Admin Console*).
+**DB**: MySQL Docker `asesmen-mysql` aktif (healthy), skema + seed terpasang.
+
+### Perintah menjalankan web
+```
+.venv/bin/python -m web.app        # atau: flask --app web.app run  (port 5000)
+```
+
+### Langkah & Hasil Nyata
+
+**1. GET /** (Dashboard) → `200`
+- Memuat angka nyata dari DB: Total Produk (10), Total Stok, Nilai Persediaan, Voucher Terbit.
+- Pil status **"MySQL Terkoneksi"** hijau (dari `ping()` nyata).
+- `v_ringkasan_stok` menampilkan ringkasan per kategori.
+
+**2. GET /produk** → `200`
+- Memuat nama produk seed nyata: `Laptop ASUS VivoBook`, `Pulpen Standard AE7`.
+- Pencarian `?q=Mouse` → hanya menampilkan `Mouse Wireless Logitech`.
+
+**3. POST /voucher/baru VALID** → `302` → `200` (alert hijau)
+```
+POST kode=PV-E2E-<ts> produk_id=5 (Kertas A4 80gsm) jumlah=7
+stok produk 5: 82 -> 75   (berkurang 7, diverifikasi via SQL)
+Alert: "Voucher PV-E2E-... berhasil dibuat — stok Kertas A4 80gsm berkurang 82 → 75 dan tercatat di stok_log oleh trigger."
+(contoh segar lain: 69 -> 67)
+```
+
+**4. POST /voucher/baru MELEBIHI STOK** → `400` (ditolak)
+```
+POST kode=PV-E2E-OVER-<ts> produk_id=9 (Wajan Anti Lengket) jumlah=999
+Response: "Stok tidak mencukupi untuk membuat voucher"
+Verifikasi SQL: stok Wajan tetap 2 (TIDAK berubah); tidak ada voucher baru; tidak ada baris stok_log baru. BUKAN crash/500.
+```
+
+**5. GET /laporan** → `200`
+- Memuat ringkasan + tabel `stok_log` (bukti trigger) dengan entri nyata
+  (produk, stok_sebelum, stok_sesudah, perubahan, alasan, waktu).
+
+**6. pytest (total akhir: lama + web)**
+```
+$ python -m pytest tests/ -v
+============================== 47 passed in 1.46s ==============================
+```
+- 39 uji lama (32 unit + 7 integrasi) tetap lulus, **tanpa regresi**.
+- 8 uji web baru (test client): dashboard angka nyata, produk seed, pencarian,
+  daftar voucher, buat sukses/kurangi stok, tolak melebihi stok, tolak kode
+  duplikat, laporan memuat stok_log.
+
+**Hasil**: semua langkah E2E web **LULUS**. Tidak ada blocker.

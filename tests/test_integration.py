@@ -6,12 +6,18 @@
 # E2E basis data WAJIB tersedia sehingga seluruh uji ini dijalankan.
 
 import itertools
+import time
 
 import pytest
 
 from src.db import get_connection, ping
 from src.config import Config
 from src import service
+
+# Kode voucher unik per proses agar aman dijalankan berulang pada DB yang sama.
+_SEQ = itertools.count(int(time.time_ns()))
+def _kode(prefix):
+    return f"{prefix}-{next(_SEQ)}"
 
 # Skip otomatis bila DB tidak bisa diping.
 pytestmark = pytest.mark.skipif(
@@ -56,7 +62,7 @@ def _voucher_ada(kode):
 
 def test_buat_voucher_sukses_kurangi_stok_dan_log(ids_produk):
     produk_id, stok_awal = ids_produk["pulpen"]
-    kode = f"VC-INT-{next(itertools.count())}"
+    kode = _kode("VC-INT")
 
     # Act
     vid = service.buat_voucher(kode, produk_id, 5)
@@ -87,7 +93,7 @@ def test_buat_voucher_sukses_kurangi_stok_dan_log(ids_produk):
 
 def test_buat_voucher_stok_kurang_rollback(ids_produk):
     produk_id, stok_awal = ids_produk["wajan"]  # stok 2
-    kode = f"VC-INT-GAGAL-{next(itertools.count())}"
+    kode = _kode("VC-INT-GAGAL")
 
     # Act: minta jumlah jauh melebihi stok.
     with pytest.raises(ValueError):
@@ -119,7 +125,7 @@ def test_view_ringkasan_stok_tersedia():
 
 def test_stored_procedure_langsung(ids_produk):
     produk_id = ids_produk["pulpen"][0]
-    kode = f"VC-SP-{next(itertools.count())}"
+    kode = _kode("VC-SP")
 
     # Baca stok segar tepat sebelum CALL (agar uji terisolasi dari uji lain).
     with get_connection() as conn:

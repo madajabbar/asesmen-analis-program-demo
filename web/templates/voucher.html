@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Voucher — Inventaris Hub{% endblock %}
+{% block content %}
+  <div class="page-title">
+    <h2>Voucher</h2>
+    <p>Daftar payment voucher yang telah dibuat.</p>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <table>
+      <thead>
+        <tr><th>Kode</th><th>Produk</th><th>Kategori</th><th>Jumlah</th><th>Total</th><th>Status</th><th>Tanggal</th></tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.kode_voucher }}</td>
+          <td>{{ r.nama_produk }}</td>
+          <td>{{ r.nama_kategori }}</td>
+          <td>{{ r.jumlah }}</td>
+          <td>{{ r.total_harga | uang }}</td>
+          <td><span class="badge aktif">{{ r.status_voucher }}</span></td>
+          <td>{{ r.tanggal.strftime('%d-%m-%Y %H:%M') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="empty">Belum ada voucher.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

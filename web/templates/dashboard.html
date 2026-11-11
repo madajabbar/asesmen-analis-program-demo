@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Inventaris Hub{% endblock %}
+{% block content %}
+  <div class="page-title">
+    <h2>Dashboard</h2>
+    <p>Ringkasan persediaan &amp; aktivitas voucher.</p>
+  </div>
+
+  <div class="grid-stats">
+    {% for s in statistik %}
+    <div class="card stat">
+      <div class="icon {{ s.warna }}">{{ s.ikon }}</div>
+      <div>
+        <div class="num">{{ s.nilai }}</div>
+        <div class="lbl">{{ s.label }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h3>Ringkasan Stok per Kategori</h3>
+    <table>
+      <thead>
+        <tr><th>Kategori</th><th>Jumlah Produk</th><th>Total Stok</th><th>Nilai Persediaan</th></tr>
+      </thead>
+      <tbody>
+        {% for r in rincian_kategori %}
+        <tr>
+          <td>{{ r.kategori }}</td>
+          <td>{{ r.jumlah_produk }}</td>
+          <td>{{ r.total_stok }}</td>
+          <td>{{ r.nilai | uang }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="total">
+          <td>Total</td><td></td><td>{{ total_kategori }}</td><td>{{ total_nilai_kategori | uang }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Stok Menipis &amp; Habis</h3>
+      {% if stok_menipis %}
+      <table>
+        <thead><tr><th>Nama Produk</th><th>Kategori</th><th>Harga</th><th>Stok</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for r in stok_menipis %}
+          <tr>
+            <td>{{ r.nama_produk }}</td>
+            <td>{{ r.nama_kategori }}</td>
+            <td>{{ r.harga_satuan | uang }}</td>
+            <td>{{ r.stok }}</td>
+            <td><span class="badge {{ r.status_stok | lower }}">{{ r.status_stok }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">Tidak ada produk menipis/habis.</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3>Voucher Pembayaran Terakhir</h3>
+      {% if voucher_terakhir %}
+      <table>
+        <thead><tr><th>Kode</th><th>Produk</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for r in voucher_terakhir %}
+          <tr>
+            <td>{{ r.kode_voucher }}</td>
+            <td>{{ r.nama_produk }} × {{ r.jumlah }}</td>
+            <td>{{ r.total_harga | uang }}</td>
+            <td><span class="badge aktif">{{ r.status_voucher }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">Belum ada voucher.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <p style="color:var(--muted);font-size:12px;">Data dari view MySQL <code>v_ringkasan_stok</code>.</p>
+{% endblock %}

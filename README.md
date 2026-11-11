@@ -68,6 +68,35 @@ python3 -m venv .venv
 
 ---
 
+## Interface Website (Fase 2)
+
+Antarmuka web Flask mengikuti desain **Stitch** *"Inventaris & Payment Voucher"*
+(design system **Cupertino Admin Console**). Token warna utama: primer biru
+`#0071E3`, hijau `#34C759`, oranye `#FF9500`, merah `#FF3B30`, latar `#F5F5F7`.
+Memakai ulang service/repository & konfigurasi `.env` Fase 1. CLI tetap utuh.
+
+### Menjalankan
+```bash
+# pastikan MySQL (docker compose) aktif & sudah init-db + seed
+.venv/bin/python -m web.app          # port 5000
+# atau
+flask --app web.app run
+```
+
+### Halaman
+| Route | Halaman |
+|---|---|
+| `GET /` | Dashboard (statistik, ringkasan per kategori, stok menipis/habis, voucher terakhir) |
+| `GET /produk` | Daftar produk + pencarian + urut |
+| `GET /voucher` | Daftar payment voucher |
+| `GET|POST /voucher/baru` | Form buat voucher (transaksi ACID, alert sukses/gagal) |
+| `GET /laporan` | Ringkasan + bukti trigger `stok_log` |
+
+Semua angka/tabel/kode voucher diambil dari **database nyata** (dilarang data
+rekaan). Status voucher = `AKTIF`. Format rupiah konsisten `Rp8.500.000`.
+
+---
+
 ## Struktur Folder
 ```
 asesmen-analis-program-demo/
@@ -90,7 +119,12 @@ asesmen-analis-program-demo/
 ├── tests/
 │   ├── test_algorithms.py      # uji unit algoritma
 │   ├── test_validation.py      # uji unit validasi
-│   └── test_integration.py     # uji integrasi MySQL (skip bila DB mati)
+│   ├── test_integration.py     # uji integrasi MySQL (skip bila DB mati)
+│   └── test_web.py             # uji web Flask (skip bila DB mati)
+├── web/
+│   ├── app.py                  # aplikasi Flask (routes)
+│   ├── templates/              # Jinja2 (base, dashboard, produk, voucher, buat_voucher, laporan)
+│   └── static/style.css         # token desain Cupertino Admin Console
 ├── examples/
 │   └── buggy_demo.py           # contoh latihan debugging
 ├── scripts/
@@ -126,4 +160,4 @@ asesmen-analis-program-demo/
 ```bash
 .venv/bin/python -m pytest tests/ -v
 ```
-Hasil terbaru: **39 lulus** (32 unit, 7 integrasi) — lihat `docs/06_pengujian.md`.
+Hasil terbaru: **47 lulus** (32 unit, 7 integrasi + 8 web) — lihat `docs/06_pengujian.md` & `E2E_LOG.md`.

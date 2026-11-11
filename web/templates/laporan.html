@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Laporan — Inventaris Hub{% endblock %}
+{% block content %}
+  <div class="page-title">
+    <h2>Laporan</h2>
+    <p>Ringkasan persediaan &amp; bukti trigger <code>stok_log</code>.</p>
+  </div>
+
+  <div class="grid-stats" style="margin-top:20px;">
+    <div class="card stat">
+      <div class="icon blue">📦</div>
+      <div><div class="num">{{ lap.total_produk }}</div><div class="lbl">Total Produk</div></div>
+    </div>
+    <div class="card stat">
+      <div class="icon green">💰</div>
+      <div><div class="num">{{ lap.nilai_persediaan | uang }}</div><div class="lbl">Nilai Persediaan</div></div>
+    </div>
+    <div class="card stat">
+      <div class="icon blue">🧾</div>
+      <div><div class="num">{{ lap.voucher_aktif }}</div><div class="lbl">Voucher Aktif</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h3>Ringkasan per Kategori</h3>
+    <table>
+      <thead><tr><th>Kategori</th><th>Jumlah Produk</th><th>Nilai Persediaan</th></tr></thead>
+      <tbody>
+        {% for r in lap.per_kategori %}
+        <tr>
+          <td>{{ r.kategori }}</td>
+          <td>{{ r.jumlah_produk }}</td>
+          <td>{{ r.nilai | uang }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Riwayat Perubahan Stok (<code>stok_log</code> — bukti trigger)</h3>
+    {% if log %}
+    <table>
+      <thead><tr><th>#</th><th>Produk</th><th>Sebelum</th><th>Sesudah</th><th>Perubahan</th><th>Alasan</th><th>Waktu</th></tr></thead>
+      <tbody>
+        {% for r in log %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.produk }}</td>
+          <td>{{ r.stok_sebelum }}</td>
+          <td>{{ r.stok_sesudah }}</td>
+          <td>{{ r.perubahan }}</td>
+          <td>{{ r.alasan }}</td>
+          <td>{{ r.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">Belum ada riwayat perubahan stok.</div>
+    {% endif %}
+  </div>
+{% endblock %}
