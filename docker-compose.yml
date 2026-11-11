@@ -1,0 +1,24 @@
+# docker-compose.yml — MySQL 8 untuk demo portofolio asesmen BNSP.
+# KONFIGURASI INI HANYA UNTUK DEMO LOKAL. Password di bawah HANYA password demo
+# lokal dan tidak boleh dipakai di lingkungan produksi mana pun.
+services:
+  db:
+    image: mysql:8
+    container_name: asesmen-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_demo_lokal_123
+      MYSQL_DATABASE: asesmen_demo
+      MYSQL_USER: app_asesmen
+      MYSQL_PASSWORD: app_demo_lokal_456
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_demo_lokal_123"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+volumes:
+  mysql_data:

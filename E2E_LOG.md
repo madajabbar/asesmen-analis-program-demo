@@ -1,0 +1,103 @@
+# E2E_LOG.md — Verifikasi End-to-End
+
+**Tanggal**: 2026-11-11
+**Jalur MySQL yang dipakai**: Docker Compose (`mysql:8`), container `asesmen-mysql`,
+port `3306`, image `mysql:8`, versi server `8.0.x` (latest tag). MySQL lokal sistem tidak
+tersedia di mesin (tidak ada binary `mysql`/service aktif), sehingga jalur Docker dipilih.
+
+---
+
+## Langkah & Hasil Nyata
+
+### 1. Ketersediaan stack
+```
+mysql   : tidak terpasang di host (systemd inactive)
+docker  : 29.6.2, container asesmen-mysql Up (healthy)
+python  : 3.13.5 | pytest 8.4.2 | mysql-connector-python 9.4.0
+gh/login: github.com account madajabbar (active)
+```
+
+### 2. Buat skema & data
+```
+$ python -m src.cli init-db
+Skema database dibuat dari sql/schema.sql.
+$ python -m src.cli seed
+Data contoh dimuat dari sql/seed.sql.
+$ mysql -uroot -p < sql/grants.sql
+GRANTS_OK
+```
+Verifikasi objek (SHOW TABLES / SHOW PROCEDURE STATUS / SHOW FUNCTION STATUS /
+SHOW TRIGGERS): **8 tabel+view**, `sp_buat_voucher`, `fn_nilai_persediaan`,
+`fn_total_voucher`, trigger `tr_produk_stok_after_update` — semua ada.
+
+### 3. CLI: list-produk & cari-produk
+```
+$ python -m src.cli list-produk
+ID  Nama                        Kategori                 Harga  Stok  Status
+1   Laptop ASUS VivoBook        Elektronik           8,500,000    12  CUKUP
+...
+9   Wajan Anti Lengket          Peralatan Dapur        110,000     2  MENIPIS
+10  Air Mineral 600ml           Minuman                  3,500     0  HABIS
+
+$ python -m src.cli cari-produk Laptop
+ID  Nama                        Kategori                 Harga  Stok
+1   Laptop ASUS VivoBook        Elektronik           8,500,000    12
+```
+
+### 4. buat-voucher SUKSES (stok berkurang, trigger log, function total)
+```
+$ python -m src.cli buat-voucher --kode VC-E2E-0001 --produk-id 6 --jumlah 10
+Voucher dibuat: id=1 kode=VC-E2E-0001 produk_id=6 jumlah=10
+```
+Verifikasi DB:
+```
+produk: Pulpen Standard AE7 stok 300 -> 290
+stok_log: stok_sebelum=300 stok_sesudah=290 perubahan=-10 alasan=perubahan_stok
+fn_total_voucher('VC-E2E-0001') = 40000.00   (4000 x 10)
+voucher: kode=VC-E2E-0001 jumlah=10 total_harga=40000.00 status=AKTIF
+```
+
+### 5. buat-voucher GAGAL (stok kurang → ROLLBACK, data tidak berubah)
+```
+$ python -m src.cli buat-voucher --kode VC-E2E-0002 --produk-id 9 --jumlah 99
+GAGAL: Stok tidak mencukupi untuk membuat voucher   (exit code 1)
+```
+Verifikasi DB: Wajan Anti Lengket **tetap stok 2**; tidak ada voucher `VC-E2E-0002`;
+tidak ada baris baru di `stok_log` (rollback sukses).
+
+### 6. Query view v_ringkasan_stok
+```
+SELECT produk_id,nama_produk,stok,status_stok FROM v_ringkasan_stok WHERE produk_id IN (6,9);
+6  Pulpen Standard AE7  290  CUKUP
+9  Wajan Anti Lengket     2  MENIPIS
+```
+
+### 7. Panggil stored procedure & function langsung
+```
+CALL sp_buat_voucher('VC-SP-DIRECT', 6, 5);        -- via mysql CLI
+produk: Pulpen stok 290 -> 285
+stok_log: perubahan=-5
+fn_nilai_persediaan() = 128355000.00
+voucher: VC-SP-DIRECT jumlah=5
+```
+
+### 8. pytest (unit + integrasi, MySQL aktif)
+```
+$ python -m pytest tests/ -v
+============================== 39 passed in 0.40s ==============================
+```
+- Uji unit: 32 lulus (algoritma 17, validasi 15)
+- Uji integrasi: 7 lulus (koneksi, voucher sukses/gagal, produk tidak ada, laporan,
+  view, stored procedure)
+
+### 9. Profiling before/after
+```
+$ python scripts/profiling_before_after.py
+Tanggal: 2026-11-11 10:52:04 | 50.000 baris | rata-rata 5 run
+SEBELUM : EXPLAIN type=ALL rows=50000 key=None   -> 0.010858 dtk
+SESUDAH : EXPLAIN type=range rows=18798 key=idx_pf_nama -> 0.005518 dtk
+Peningkatan: 49,2% lebih cepat
+```
+
+### 10. Hasil & sisa
+Semua langkah **LULUS**. Tidak ada blocker tersisa. Detail tambahan di `docs/01–06`.
